@@ -200,11 +200,46 @@
                 <p id="win-stats" class="text-sm text-[#7D5A50] mb-4">
                     Happy birthdayyy. Du pi cari bunga ja...
                 </p>
-                <button id="play-again-btn" class="kawaii-btn w-full py-3 px-6 rounded-2xl text-lg tracking-wide">
-                    Play Again 🔄
+                <button id="open-wish-btn" class="kawaii-btn w-full py-3 px-6 rounded-2xl text-lg tracking-wide">
+                     OPEN WISH CARD 💌
                 </button>
             </div>
         </div>
+		
+		<!-- Wish Card Overlay -->
+		<div id="wish-overlay" class="hidden absolute inset-0 bg-pink-100/70 backdrop-blur-sm flex items-center justify-center p-4 z-30">
+			<div id="wish-card" class="bg-white rounded-3xl p-5 sm:p-7 max-w-md w-full max-h-full overflow-y-auto border-4 border-pink-300 shadow-2xl text-center transform transition-all duration-500 scale-90 opacity-0">
+				<div class="text-4xl mb-2">🎂💐</div>
+				<h2 class="text-2xl sm:text-3xl font-extrabold text-[#5D4037] mb-3">Happy Birthday!</h2>
+				<p class="text-sm sm:text-base text-[#7D5A50] leading-relaxed whitespace-pre-line mb-5">
+				Happy birthday fatinnn💖. Sorry takdak hadiah physical, sebab kena scam dengan shopee sob sob🙁. 
+				Tapiii sebenarnya hadiah yg dalam box tu takdak apa pun sangat hahahah.
+				Semoga dimurahkan rezeki selalu fatinku yg pendek dan sentiasa dipanjangkan umur (disisi amin).
+				Btw ni la keja i tadi hahahah
+				Jangan sedih2 harini sebabbb ada surprise lagiii🥳🎂💐
+				</p>
+				<p class="text-sm font-bold text-pink-500 mb-5">- Amin hehe🐻</p>
+					<button id="open-qr-btn" class="kawaii-btn w-full py-3 px-6 rounded-2xl text-lg tracking-wide">
+					Tekan saya 
+				</button>
+				<!--<button id="play-again-btn" class="kawaii-btn w-full py-3 px-6 rounded-2xl text-lg tracking-wide">
+					Play Again 🔄
+				</button>-->
+			</div>
+		</div>
+		
+				<!-- QR Card Overlay -->
+		<div id="qr-overlay" class="hidden absolute inset-0 bg-pink-100/70 backdrop-blur-sm flex items-center justify-center p-4 z-30">
+			<div id="qr-card" class="bg-white rounded-3xl p-5 sm:p-7 max-w-sm w-full max-h-full overflow-y-auto border-4 border-pink-300 shadow-2xl text-center transform transition-all duration-500 scale-90 opacity-0">
+				<div class="text-4xl mb-2">🎁</div>
+				<h2 class="text-2xl font-extrabold text-[#5D4037] mb-2">Tadaaa!</h2>
+				<p class="text-sm text-[#7D5A50] mb-4">SS QR Ni 💖</p>
+				<img src="./qr.png" alt="QR code" class="w-48 h-48 sm:w-56 sm:h-56 object-contain mx-auto mb-5 rounded-2xl border-2 border-pink-200 bg-white p-2">
+				<button id="play-again-btn" class="kawaii-btn w-full py-3 px-6 rounded-2xl text-lg tracking-wide">
+					Play Again 🔄
+				</button>
+			</div>
+		</div>
     </main>
 
     <!-- Bottom Controls Bar (Visible on Mobile & Desktop for cozy convenience) -->
@@ -251,6 +286,10 @@
         const radarText = document.getElementById('radar-text');
         const snackCounter = document.getElementById('snack-counter');
         const muteBtn = document.getElementById('mute-btn');
+		const wishOverlay = document.getElementById('wish-overlay');
+		const wishCard = document.getElementById('wish-card');
+		const qrOverlay = document.getElementById('qr-overlay');
+		const qrCard = document.getElementById('qr-card');
 
         // Logical coordinate space (1000 x 620) for crisp scaling across all screens
         const WORLD_W = 1000;
@@ -630,6 +669,15 @@
             winCard.classList.remove('scale-100', 'opacity-100');
             winCard.classList.add('scale-95', 'opacity-0');
             winOverlay.classList.add('hidden');
+			
+			//reset wish card
+			wishCard.classList.remove('scale-100', 'opacity-100');
+			wishCard.classList.add('scale-90', 'opacity-0');
+			wishOverlay.classList.add('hidden');
+			
+			qrCard.classList.remove('scale-100', 'opacity-100');
+			qrCard.classList.add('scale-90', 'opacity-0');
+			qrOverlay.classList.add('hidden');
         }
 
         // ==========================================
@@ -781,6 +829,28 @@
             bubu.emote = { text: "Default sprites restored! 🌸", timer: 1.8 };
             sound.playStep();
         });
+		
+		document.getElementById('open-wish-btn').addEventListener('click', () => {
+		sound.init();
+		sound.playCollect();
+		winOverlay.classList.add('hidden');
+		wishOverlay.classList.remove('hidden');
+		requestAnimationFrame(() => {
+			wishCard.classList.remove('scale-90', 'opacity-0');
+			wishCard.classList.add('scale-100', 'opacity-100');
+			});
+		});
+		
+		document.getElementById('open-qr-btn').addEventListener('click', () => {
+			sound.init();
+			sound.playCollect();
+			wishOverlay.classList.add('hidden');
+			qrOverlay.classList.remove('hidden');
+			requestAnimationFrame(() => {
+				qrCard.classList.remove('scale-90', 'opacity-0');
+				qrCard.classList.add('scale-100', 'opacity-100');
+			});
+		});
 
         // ==========================================
         // 5. GAMEPLAY LOGIC & INTERACTIONS
