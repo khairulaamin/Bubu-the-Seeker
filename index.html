@@ -1,0 +1,1746 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Bubu & Dudu: Meadow Hide & Seek</title>
+    <!-- Load Google Fonts for a soft, kawaii rounded aesthetic -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@600;700;800&display=swap" rel="stylesheet">
+    <!-- Load Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Custom Kawaii Styling & Animations */
+        * {
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: manipulation;
+        }
+
+        body {
+            font-family: 'Fredoka', 'Nunito', sans-serif;
+            background: linear-gradient(135deg, #FFF5F7 0%, #F0FDF4 50%, #FEFCE8 100%);
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            height: 100dvh;
+            width: 100vw;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* Cute tactile 3D kawaii buttons */
+        .kawaii-btn {
+            background: linear-gradient(180deg, #FF8FA3 0%, #FF6B8B 100%);
+            border: 3px solid #FFFFFF;
+            box-shadow: 0 5px 0 #D94E6E, 0 8px 15px rgba(217, 78, 110, 0.3);
+            transition: transform 0.1s ease, box-shadow 0.1s ease;
+            color: white;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        .kawaii-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 7px 0 #D94E6E, 0 10px 18px rgba(217, 78, 110, 0.35);
+        }
+
+        .kawaii-btn:active {
+            transform: translateY(3px);
+            box-shadow: 0 2px 0 #D94E6E, 0 4px 8px rgba(217, 78, 110, 0.25);
+        }
+
+        .kawaii-btn-secondary {
+            background: linear-gradient(180deg, #FFFDF9 0%, #F5EBE0 100%);
+            border: 3px solid #E3D5CA;
+            box-shadow: 0 4px 0 #D5BDAF, 0 6px 12px rgba(139, 110, 99, 0.15);
+            color: #6D4C41;
+            transition: transform 0.1s ease, box-shadow 0.1s ease;
+        }
+
+        .kawaii-btn-secondary:active {
+            transform: translateY(3px);
+            box-shadow: 0 1px 0 #D5BDAF;
+        }
+
+        /* D-pad directional buttons */
+        .dpad-btn {
+            background: rgba(255, 255, 255, 0.88);
+            backdrop-filter: blur(4px);
+            border: 3px solid #F8C8DC;
+            box-shadow: 0 4px 0 #E5989B, 0 6px 12px rgba(0, 0, 0, 0.08);
+            color: #7D5A50;
+            transition: transform 0.08s, background-color 0.08s;
+        }
+
+        .dpad-btn:active, .dpad-btn.active {
+            transform: translateY(3px) scale(0.96);
+            background: #FFE5EC;
+            box-shadow: 0 1px 0 #E5989B;
+        }
+
+        /* Heartbeat animation for radar */
+        @keyframes heartbeat {
+            0%, 100% { transform: scale(1); }
+            25% { transform: scale(1.22); }
+            50% { transform: scale(0.95); }
+            75% { transform: scale(1.15); }
+        }
+
+        .radar-pulse {
+            animation: heartbeat var(--pulse-speed, 1.2s) infinite ease-in-out;
+        }
+
+        /* Soft floating card animation */
+        @keyframes floatSlow {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-6px); }
+        }
+
+        .float-card {
+            animation: floatSlow 3s ease-in-out infinite;
+        }
+
+        /* Canvas container */
+        #game-frame {
+            box-shadow: 0 14px 35px rgba(125, 90, 80, 0.16), 0 0 0 6px #FFFFFF, 0 0 0 10px #FAD2E1;
+            border-radius: 28px;
+            overflow: hidden;
+            position: relative;
+            background-color: #C7E9B0;
+        }
+    </style>
+</head>
+<body class="p-2 sm:p-4">
+
+    <!-- Top HUD Bar -->
+    <header class="w-full max-w-4xl flex flex-wrap items-center justify-between gap-2 mb-2 sm:mb-3 px-1 z-10">
+        <!-- Title & Status -->
+        <div class="flex items-center gap-2 bg-white/90 backdrop-blur-sm px-3.5 py-1.5 rounded-full border-2 border-pink-200 shadow-sm">
+            <span class="text-xl">🐻‍❄️</span>
+            <h1 class="text-base sm:text-lg font-bold text-[#6D4C41] tracking-tight">Bubu & Dudu</h1>
+        </div>
+
+        <!-- Hot/Cold Heart Radar Pill -->
+        <div id="radar-container" class="flex items-center gap-2.5 bg-white/95 backdrop-blur-sm px-4 py-1.5 rounded-full border-2 border-pink-200 shadow-sm transition-colors duration-300">
+            <div id="radar-heart" class="radar-pulse text-xl sm:text-2xl select-none" style="--pulse-speed: 1.4s;">🤍</div>
+            <div class="flex flex-col">
+                <span class="text-[10px] uppercase tracking-wider font-bold text-pink-400 leading-none">Dudu Radar</span>
+                <span id="radar-text" class="text-xs sm:text-sm font-bold text-stone-600 leading-tight">Sniffing around...</span>
+				
+            </div>
+        </div>
+
+        <!-- Snacks Counter & Audio Toggle -->
+        <div class="flex items-center gap-1.5 sm:gap-2">
+            <!-- Custom PNG Sprite Uploaders (Auto-removes background & crops) -->
+            <label title="Upload Bubu Image (Auto removes background)" class="kawaii-btn-secondary px-2.5 h-9 sm:h-10 rounded-full flex items-center gap-1 text-xs font-bold cursor-pointer shadow-sm">
+                <span>🖼️</span>
+                <span class="hidden md:inline">Custom Bubu</span>
+                <input type="file" id="upload-bubu" accept="image/*" class="hidden">
+            </label>
+            <label title="Upload Dudu Image (Auto removes background)" class="kawaii-btn-secondary px-2.5 h-9 sm:h-10 rounded-full flex items-center gap-1 text-xs font-bold cursor-pointer shadow-sm">
+                <span>🖼️</span>
+                <span class="hidden md:inline">Custom Dudu</span>
+                <input type="file" id="upload-dudu" accept="image/*" class="hidden">
+            </label>
+            <button id="reset-sprites-btn" title="Reset Default Sprites" class="hidden kawaii-btn-secondary w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center text-sm shadow-sm">
+                ↩️
+            </button>
+
+            <div class="flex items-center gap-1.5 bg-white/90 backdrop-blur-sm px-3 py-1.5 rounded-full border-2 border-amber-200 shadow-sm">
+                <span class="text-base sm:text-lg">🍓</span>
+                <span id="snack-counter" class="text-xs sm:text-base font-bold text-amber-800">0 / 5</span>
+            </div>
+            <button id="mute-btn" aria-label="Toggle Sound" class="kawaii-btn-secondary w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center text-base sm:text-lg shadow-sm">
+                🔊
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Game Canvas Area -->
+    <main id="game-frame" class="w-full max-w-4xl flex-1 max-h-[68vh] sm:max-h-[72vh] relative flex items-center justify-center">
+        <canvas id="gameCanvas" class="w-full h-full block cursor-pointer"></canvas>
+
+        <!-- Start Screen Overlay -->
+        <div id="start-overlay" class="absolute inset-0 bg-[#FFF8F6]/85 backdrop-blur-sm flex flex-col items-center justify-center p-6 text-center z-20 transition-opacity duration-300">
+            <div class="bg-white rounded-3xl p-6 sm:p-8 max-w-md w-full border-4 border-pink-200 shadow-xl float-card">
+				<div class="flex justify-center items-center gap-3 mb-3">
+				
+					<img src="./bubu.gif" alt="Bubu" class="h-16 sm:h-20 w-auto object-contain">
+					<span class="text-3xl animate-bounce">💕</span>
+					<img src="./dudu.gif" alt="Dudu" class="h-16 sm:h-20 w-auto object-contain">
+				</div>	
+							<h2 class="text-2xl sm:text-3xl font-extrabold text-[#5D4037] mb-2">Dudu hilang!!?</h2>
+                <p class="text-sm sm:text-base text-[#7D5A50] mb-5 leading-relaxed">
+                    Dudu hilang?! Dudu merajuk ka? Bubu adaaaa <span class="font-bold text-pink-500">Dudu Radar</span>(kat atas), so boleh cari Dudu YEYYY(atau try and error). AYUHHH
+                </p>
+                <div class="bg-pink-50/80 rounded-2xl p-3 mb-6 text-xs sm:text-sm text-[#6D4C41] border border-pink-100">
+                    <p class="font-bold mb-1">How to Play?</p>
+                    <p>🕹️ Pakai <b>WASD / Arrow Keys</b>, tap screen, atau guna UI arrow</p>
+                    <p class="mt-1">🌿 <b>Space / Peek</b> nak check</p>
+                </div>
+                <button id="start-btn" class="kawaii-btn w-full py-3.5 px-6 rounded-2xl text-lg sm:text-xl tracking-wide">
+                    FIND DU 🌸
+                </button>
+            </div>
+        </div>
+
+        <!-- Victory / Cutscene Overlay Card (Appears after cutscene blooms) -->
+        <div id="win-overlay" class="hidden absolute inset-x-0 bottom-4 sm:bottom-6 flex flex-col items-center justify-end p-4 pointer-events-none z-20">
+            <div class="bg-white/95 backdrop-blur-md rounded-3xl p-5 sm:p-6 max-w-md w-full border-4 border-pink-300 shadow-2xl text-center pointer-events-auto transform transition-all duration-500 scale-95 opacity-0" id="win-card">
+                <div class="inline-block bg-pink-100 text-pink-600 font-bold text-xs px-3 py-1 rounded-full mb-2">
+                    ✨ Surprise Bouquet! ✨
+                </div>
+                <h2 class="text-2xl sm:text-3xl font-extrabold text-[#5D4037] mb-1">Found Du! 💖</h2>
+                <p id="win-stats" class="text-sm text-[#7D5A50] mb-4">
+                    Happy birthdayyy. Du pi cari bunga ja...
+                </p>
+                <button id="play-again-btn" class="kawaii-btn w-full py-3 px-6 rounded-2xl text-lg tracking-wide">
+                    Play Again 🔄
+                </button>
+            </div>
+        </div>
+    </main>
+
+    <!-- Bottom Controls Bar (Visible on Mobile & Desktop for cozy convenience) -->
+    <footer class="w-full max-w-4xl flex items-center justify-between gap-4 mt-2.5 sm:mt-3 px-2 z-10">
+        <!-- Helper Tip -->
+        <div class="hidden sm:flex items-center gap-2 text-xs font-bold text-[#7D5A50] bg-white/80 px-4 py-2 rounded-2xl border border-pink-100">
+            <span>💡 Tip:</span>
+            <span>Tap anywhere on the meadow to make Bubu run there!</span>
+        </div>
+
+        <!-- Touch / On-screen Controls -->
+        <div class="flex items-center justify-between w-full sm:w-auto sm:ml-auto gap-4">
+            <!-- D-Pad -->
+            <div class="grid grid-cols-3 gap-1.5 w-36 sm:w-40">
+                <div></div>
+                <button id="btn-up" aria-label="Move Up" class="dpad-btn h-11 sm:h-11 rounded-2xl flex items-center justify-center font-bold text-lg">▲</button>
+                <div></div>
+                <button id="btn-left" aria-label="Move Left" class="dpad-btn h-11 sm:h-11 rounded-2xl flex items-center justify-center font-bold text-lg">◀</button>
+                <button id="btn-down" aria-label="Move Down" class="dpad-btn h-11 sm:h-11 rounded-2xl flex items-center justify-center font-bold text-lg">▼</button>
+                <button id="btn-right" aria-label="Move Right" class="dpad-btn h-11 sm:h-11 rounded-2xl flex items-center justify-center font-bold text-lg">▶</button>
+            </div>
+
+            <!-- Action / Peek Button -->
+            <button id="btn-peek" class="kawaii-btn h-16 px-5 sm:px-6 rounded-3xl flex flex-col items-center justify-center shadow-md">
+                <span class="text-xl leading-none mb-0.5">👀</span>
+                <span class="text-xs sm:text-sm font-extrabold tracking-wide">PEEK!</span>
+            </button>
+        </div>
+    </footer>
+
+    <script>
+        // ==========================================
+        // 1. CANVAS & DOM SETUP
+        // ==========================================
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        const startOverlay = document.getElementById('start-overlay');
+        const winOverlay = document.getElementById('win-overlay');
+        const winCard = document.getElementById('win-card');
+        const winStats = document.getElementById('win-stats');
+        const radarContainer = document.getElementById('radar-container');
+        const radarHeart = document.getElementById('radar-heart');
+        const radarText = document.getElementById('radar-text');
+        const snackCounter = document.getElementById('snack-counter');
+        const muteBtn = document.getElementById('mute-btn');
+
+        // Logical coordinate space (1000 x 620) for crisp scaling across all screens
+        const WORLD_W = 1000;
+        const WORLD_H = 620;
+
+        // ==========================================
+        // 2. WEB AUDIO SOUND SYNTHESIZER (No external URLs)
+        // ==========================================
+        class KawaiiSound {
+            constructor() {
+                this.ctx = null;
+                this.muted = false;
+                this.lastStepTime = 0;
+            }
+
+            init() {
+                if (!this.ctx) {
+                    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+                    if (AudioCtx) this.ctx = new AudioCtx();
+                }
+                if (this.ctx && this.ctx.state === 'suspended') {
+                    this.ctx.resume();
+                }
+            }
+
+            toggleMute() {
+                this.muted = !this.muted;
+                return this.muted;
+            }
+
+            playTone(freq, type, duration, vol = 0.12, delay = 0) {
+                if (this.muted || !this.ctx) return;
+                const now = this.ctx.currentTime + delay;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = type;
+                osc.frequency.setValueAtTime(freq, now);
+                gain.gain.setValueAtTime(vol, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + duration);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start(now);
+                osc.stop(now + duration);
+            }
+
+            playStep() {
+                if (this.muted || !this.ctx) return;
+                const now = performance.now();
+                if (now - this.lastStepTime < 220) return;
+                this.lastStepTime = now;
+                this.playTone(280 + Math.random() * 60, 'sine', 0.06, 0.03);
+            }
+
+            playCollect() {
+                this.playTone(587.33, 'sine', 0.14, 0.14, 0);      // D5
+                this.playTone(880.00, 'sine', 0.22, 0.14, 0.08);   // A5
+            }
+
+            playDecoy() {
+                this.playTone(392.00, 'triangle', 0.12, 0.12, 0);  // G4
+                this.playTone(329.63, 'triangle', 0.18, 0.12, 0.1); // E4
+            }
+
+            playWinFanfare() {
+                const notes = [523.25, 659.25, 783.99, 1046.50, 987.77, 1046.50];
+                const times = [0, 0.12, 0.24, 0.36, 0.55, 0.72];
+                notes.forEach((n, i) => {
+                    this.playTone(n, 'triangle', 0.35, 0.16, times[i]);
+                });
+            }
+        }
+
+        const sound = new KawaiiSound();
+
+		const dialogAudio = new Audio('./bubu.mp3');
+		const duduSound= new Audio('./dudu.mp3');
+		let lastDialogPlayTime = 0;
+
+		function playDialogSound() {
+		if (sound.muted) return;
+		const now = performance.now();
+		if (now - lastDialogPlayTime < 450) return;
+		lastDialogPlayTime = now;
+		dialogAudio.currentTime = 0;
+		dialogAudio.play().catch(() => {});
+		
+	
+		}
+		
+		function playDuduSound() {
+		if (sound.muted) return;
+		const now = performance.now();
+		if (now - lastDialogPlayTime < 450) return;
+		lastDialogPlayTime = now;
+		duduSound.currentTime = 0;
+		duduSound.play().catch(() => {});}
+		
+        // ==========================================
+        // 3. GAME STATE & ENTITIES
+        // ==========================================
+        let gameState = 'START'; // 'START' | 'PLAYING' | 'CUTSCENE'
+        let lastTimestamp = 0;
+        let globalTime = 0;
+
+        // Input state
+        const keys = {
+            ArrowUp: false, ArrowDown: false, ArrowLeft: false, ArrowRight: false,
+            w: false, a: false, s: false, d: false,
+            W: false, A: false, S: false, D: false
+        };
+        let pointerTarget = null;
+
+        // Bubu (Player character)
+        const bubu = {
+            x: 160,
+            y: 340,
+            speed: 245,
+            radius: 26,
+            facing: 1, // 1 = right, -1 = left
+            walkCycle: 0,
+            isMoving: false,
+            emote: null, // { text, timer }
+            blush: 0
+        };
+
+        // Dudu (Hiding character)
+        let dudu = {
+            x: 0,
+            y: 0,
+            spotIndex: 0,
+            revealed: false,
+            revealProgress: 0,
+            bouncePhase: 0,
+            bouquetScale: 0
+        };
+
+        // Meadow decorations, hiding spots, snacks, critters & particles
+        let clouds = [];
+        let grassTufts = [];
+        let meadowFlowers = [];
+        let hidingSpots = [];
+        let snacks = [];
+        let collectedSnacks = 0;
+        const TOTAL_SNACKS = 5;
+        let particles = [];
+        let decoyCritters = [];
+
+        // ==========================================
+        // 3B. HIGH-RES PNG SPRITE ENGINE (<img> + Background Removal)
+        // ==========================================
+        const bubuImg = new Image();
+        const duduImg = new Image();
+        let bubuSpriteReady = false;
+        let duduSpriteReady = false;
+
+        bubuImg.onload = () => { bubuSpriteReady = true; };
+        duduImg.onload = () => { duduSpriteReady = true; };
+
+        const DEFAULT_SPRITES = {
+            bubuDataUrl: './bubu.png',
+            duduDataUrl: './dudu.png'
+        };
+
+        function loadSpritesFromStorageOrDefault() {
+            const savedBubu = localStorage.getItem('bubu_custom_png');
+            const savedDudu = localStorage.getItem('dudu_custom_png');
+            bubuImg.src = savedBubu || DEFAULT_SPRITES.bubuDataUrl;
+            duduImg.src = savedDudu || DEFAULT_SPRITES.duduDataUrl;
+
+            const resetBtn = document.getElementById('reset-sprites-btn');
+            if (savedBubu || savedDudu) {
+                resetBtn.classList.remove('hidden');
+            } else {
+                resetBtn.classList.add('hidden');
+            }
+        }
+
+        /**
+         * Processes any user-uploaded Bubu or Dudu image:
+         * 1. Detects if a combined 2-character image (like Dudu on left + Bubu on right) was uploaded
+         *    and smartly crops the matching half if wide aspect ratio > 1.25.
+         * 2. Uses flood-fill from image borders to remove solid backgrounds (pink, white, etc.)
+         *    while keeping Bubu's white fur intact!
+         * 3. Auto-trims transparent padding and exports a crisp PNG data-URI.
+         */
+        function processUploadedCharacterImage(file, role, callback) {
+            const reader = new FileReader();
+            reader.onload = (ev) => {
+                const rawImg = new Image();
+                rawImg.onload = () => {
+                    const maxDim = 420;
+                    let srcX = 0, srcY = 0, srcW = rawImg.width, srcH = rawImg.height;
+
+                    // If user uploads a wide combined photo with both bears side-by-side:
+                    // Dudu (brown) is typically on the left half, Bubu (white) on the right half
+                    if (rawImg.width > rawImg.height * 1.22) {
+                        srcW = Math.floor(rawImg.width * 0.52);
+                        srcX = role === 'bubu' ? Math.floor(rawImg.width * 0.48) : 0;
+                    }
+
+                    const scale = Math.min(maxDim / srcW, maxDim / srcH, 1);
+                    const w = Math.max(32, Math.round(srcW * scale));
+                    const h = Math.max(32, Math.round(srcH * scale));
+
+                    const off = document.createElement('canvas');
+                    off.width = w;
+                    off.height = h;
+                    const oCtx = off.getContext('2d');
+                    oCtx.drawImage(rawImg, srcX, srcY, srcW, srcH, 0, 0, w, h);
+
+                    const imgData = oCtx.getImageData(0, 0, w, h);
+                    const data = imgData.data;
+
+                    // Sample top-left corner background color
+                    const bgR = data[0], bgG = data[1], bgB = data[2], bgA = data[3];
+
+                    // Only flood-fill remove if corner isn't already transparent
+                    if (bgA > 200) {
+                        const visited = new Uint8Array(w * h);
+                        const stack = [0, w - 1, (h - 1) * w, h * w - 1];
+                        const tol = 42;
+
+                        while (stack.length > 0) {
+                            const idx = stack.pop();
+                            if (visited[idx]) continue;
+                            visited[idx] = 1;
+
+                            const p = idx * 4;
+                            const dr = Math.abs(data[p] - bgR);
+                            const dg = Math.abs(data[p + 1] - bgG);
+                            const db = Math.abs(data[p + 2] - bgB);
+
+                            if (dr + dg + db <= tol * 2.2) {
+                                data[p + 3] = 0; // Make background transparent
+                                const x = idx % w;
+                                const y = (idx - x) / w;
+                                if (x > 0) stack.push(idx - 1);
+                                if (x < w - 1) stack.push(idx + 1);
+                                if (y > 0) stack.push(idx - w);
+                                if (y < h - 1) stack.push(idx + w);
+                            }
+                        }
+                        oCtx.putImageData(imgData, 0, 0);
+                    }
+
+                    // Auto-crop to non-transparent bounding box
+                    let minX = w, minY = h, maxX = 0, maxY = 0;
+                    for (let y = 0; y < h; y++) {
+                        for (let x = 0; x < w; x++) {
+                            if (data[(y * w + x) * 4 + 3] > 20) {
+                                if (x < minX) minX = x;
+                                if (x > maxX) maxX = x;
+                                if (y < minY) minY = y;
+                                if (y > maxY) maxY = y;
+                            }
+                        }
+                    }
+
+                    if (maxX > minX && maxY > minY) {
+                        const cropW = maxX - minX + 1;
+                        const cropH = maxY - minY + 1;
+                        const trimCanvas = document.createElement('canvas');
+                        trimCanvas.width = cropW;
+                        trimCanvas.height = cropH;
+                        trimCanvas.getContext('2d').drawImage(off, minX, minY, cropW, cropH, 0, 0, cropW, cropH);
+                        callback(trimCanvas.toDataURL('image/png'));
+                    } else {
+                        callback(off.toDataURL('image/png'));
+                    }
+                };
+                rawImg.src = ev.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        // Predefined scenic hiding spots around the meadow
+        const SPOT_TEMPLATES = [
+            { x: 200, y: 185, type: 'cherry_tree', label: 'Sakura Tree' },
+            { x: 440, y: 155, type: 'berry_bush', label: 'Berry Bush' },
+            { x: 760, y: 185, type: 'oak_tree', label: 'Cozy Oak' },
+            { x: 350, y: 340, type: 'flower_bush', label: 'Hydrangea Bush' },
+            { x: 615, y: 300, type: 'sunflower_patch', label: 'Sunflowers' },
+            { x: 845, y: 390, type: 'picnic_basket', label: 'Picnic Spot' },
+            { x: 215, y: 500, type: 'mushroom_log', label: 'Mushroom Log' },
+            { x: 545, y: 515, type: 'cherry_tree', label: 'Blossom Tree' }
+        ];
+
+        function initEnvironment() {
+            clouds = [
+                { x: 140, y: 55, scale: 0.9, speed: 12 },
+                { x: 480, y: 42, scale: 1.15, speed: 9 },
+                { x: 820, y: 65, scale: 0.85, speed: 14 }
+            ];
+
+            grassTufts = [];
+            for (let i = 0; i < 48; i++) {
+                grassTufts.push({
+                    x: 40 + Math.random() * (WORLD_W - 80),
+                    y: 140 + Math.random() * (WORLD_H - 165),
+                    size: 0.7 + Math.random() * 0.6,
+                    phase: Math.random() * Math.PI * 2
+                });
+            }
+
+            const flowerColors = ['#FF8FA3', '#FFD166', '#BDB2FF', '#FFADAD', '#FFFFFF'];
+            meadowFlowers = [];
+            for (let i = 0; i < 36; i++) {
+                meadowFlowers.push({
+                    x: 40 + Math.random() * (WORLD_W - 80),
+                    y: 145 + Math.random() * (WORLD_H - 170),
+                    color: flowerColors[i % flowerColors.length],
+                    size: 4 + Math.random() * 3,
+                    phase: Math.random() * Math.PI * 2
+                });
+            }
+        }
+
+        function resetGame() {
+            // Reset Bubu to cozy starting clearing on the left
+            bubu.x = 120;
+            bubu.y = 335;
+            bubu.facing = 1;
+            bubu.walkCycle = 0;
+            bubu.isMoving = false;
+            bubu.emote = { text: "Dudu~ Where are you? 💕", timer: 2.8 };
+			playDialogSound();
+            bubu.blush = 0;
+            pointerTarget = null;
+
+            // Create hiding spots & randomly pick one for Dudu
+            const decoyPool = ['bunny', 'butterfly', 'bird', 'cat', 'frog'];
+            const duduIdx = Math.floor(Math.random() * SPOT_TEMPLATES.length);
+
+            hidingSpots = SPOT_TEMPLATES.map((tpl, idx) => ({
+                ...tpl,
+                id: idx,
+                hasDudu: idx === duduIdx,
+                checked: false,
+                shakeTimer: 0,
+                decoyType: decoyPool[idx % decoyPool.length]
+            }));
+
+            dudu = {
+                x: hidingSpots[duduIdx].x,
+                y: hidingSpots[duduIdx].y,
+                spotIndex: duduIdx,
+                revealed: false,
+                revealProgress: 0,
+                bouncePhase: 0,
+                bouquetScale: 0
+            };
+
+            // Place 5 collectible snacks around the meadow away from obstacles
+            const snackTypes = ['🍓', '🧁', '🍯', '🍑', '🍩'];
+            const snackCoords = [
+                { x: 245, y: 290 },
+                { x: 485, y: 215 },
+                { x: 750, y: 340 },
+                { x: 685, y: 470 },
+                { x: 380, y: 465 }
+            ];
+            snacks = snackCoords.map((pos, i) => ({
+                x: pos.x,
+                y: pos.y,
+                emoji: snackTypes[i],
+                collected: false,
+                bobPhase: i * 1.1
+            }));
+
+            collectedSnacks = 0;
+            updateSnackUI();
+
+            particles = [];
+            decoyCritters = [];
+
+            // Reset Win Overlay
+            winCard.classList.remove('scale-100', 'opacity-100');
+            winCard.classList.add('scale-95', 'opacity-0');
+            winOverlay.classList.add('hidden');
+        }
+
+        // ==========================================
+        // 4. INPUT HANDLING (Keyboard, Touch, Mouse)
+        // ==========================================
+        window.addEventListener('keydown', (e) => {
+            if (e.key in keys) {
+                keys[e.key] = true;
+                pointerTarget = null; // Cancel tap-to-walk on manual key press
+            }
+            if ((e.key === ' ' || e.key === 'Enter') && gameState === 'PLAYING') {
+                e.preventDefault();
+                triggerPeekAction();
+            }
+        });
+
+        window.addEventListener('keyup', (e) => {
+            if (e.key in keys) {
+                keys[e.key] = false;
+            }
+        });
+
+        // Canvas click/tap to walk or check spot
+        function handleCanvasPointer(clientX, clientY) {
+            if (gameState !== 'PLAYING') return;
+            sound.init();
+
+            const rect = canvas.getBoundingClientRect();
+            const scaleX = WORLD_W / rect.width;
+            const scaleY = WORLD_H / rect.height;
+            const worldX = (clientX - rect.left) * scaleX;
+            const worldY = (clientY - rect.top) * scaleY;
+
+            // Spawn a cute little tap ring effect
+            spawnTapRipple(worldX, worldY);
+
+            // Check if user tapped directly on a hiding spot that Bubu is already close to
+            for (const spot of hidingSpots) {
+                const distClickToSpot = Math.hypot(worldX - spot.x, worldY - spot.y);
+                const distBubuToSpot = Math.hypot(bubu.x - spot.x, bubu.y - spot.y);
+                if (distClickToSpot < 65 && distBubuToSpot < 95) {
+                    inspectSpot(spot);
+                    pointerTarget = null;
+                    return;
+                }
+            }
+
+            // Otherwise set walk target (clamped inside meadow bounds)
+            pointerTarget = {
+                x: Math.max(55, Math.min(WORLD_W - 55, worldX)),
+                y: Math.max(135, Math.min(WORLD_H - 45, worldY))
+            };
+        }
+
+        canvas.addEventListener('mousedown', (e) => handleCanvasPointer(e.clientX, e.clientY));
+        canvas.addEventListener('touchstart', (e) => {
+            if (e.touches.length > 0) {
+                e.preventDefault();
+                handleCanvasPointer(e.touches[0].clientX, e.touches[0].clientY);
+            }
+        }, { passive: false });
+
+        // On-screen D-pad binding (supports both mouse hold and touch hold)
+        function bindDpadButton(btnId, keyName) {
+            const btn = document.getElementById(btnId);
+            const press = (e) => {
+                e.preventDefault();
+                sound.init();
+                keys[keyName] = true;
+                pointerTarget = null;
+                btn.classList.add('active');
+            };
+            const release = (e) => {
+                e.preventDefault();
+                keys[keyName] = false;
+                btn.classList.remove('active');
+            };
+            btn.addEventListener('mousedown', press);
+            btn.addEventListener('mouseup', release);
+            btn.addEventListener('mouseleave', release);
+            btn.addEventListener('touchstart', press, { passive: false });
+            btn.addEventListener('touchend', release);
+            btn.addEventListener('touchcancel', release);
+        }
+
+        bindDpadButton('btn-up', 'ArrowUp');
+        bindDpadButton('btn-down', 'ArrowDown');
+        bindDpadButton('btn-left', 'ArrowLeft');
+        bindDpadButton('btn-right', 'ArrowRight');
+
+        document.getElementById('btn-peek').addEventListener('click', () => {
+            sound.init();
+            if (gameState === 'PLAYING') triggerPeekAction();
+        });
+
+        document.getElementById('start-btn').addEventListener('click', () => {
+            sound.init();
+            sound.playCollect();
+            startOverlay.style.opacity = '0';
+            setTimeout(() => {
+                startOverlay.classList.add('hidden');
+            }, 300);
+            resetGame();
+            gameState = 'PLAYING';
+        });
+
+        document.getElementById('play-again-btn').addEventListener('click', () => {
+            sound.init();
+            sound.playCollect();
+            resetGame();
+            gameState = 'PLAYING';
+        });
+
+        muteBtn.addEventListener('click', () => {
+            sound.init();
+            const isMuted = sound.toggleMute();
+            muteBtn.textContent = isMuted ? '🔇' : '🔊';
+        });
+
+        // Custom PNG Sprite Upload Handlers
+        document.getElementById('upload-bubu').addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            processUploadedCharacterImage(file, 'bubu', (pngDataUrl) => {
+                bubuImg.src = pngDataUrl;
+                try { localStorage.setItem('bubu_custom_png', pngDataUrl); } catch (_) {}
+                document.getElementById('reset-sprites-btn').classList.remove('hidden');
+                bubu.emote = { text: "New Bubu look! ✨", timer: 2.0 };
+                sound.playCollect();
+            });
+        });
+
+        document.getElementById('upload-dudu').addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            processUploadedCharacterImage(file, 'dudu', (pngDataUrl) => {
+                duduImg.src = pngDataUrl;
+                try { localStorage.setItem('dudu_custom_png', pngDataUrl); } catch (_) {}
+                document.getElementById('reset-sprites-btn').classList.remove('hidden');
+                bubu.emote = { text: "Updated Dudu sprite! 💖", timer: 2.0 };
+                sound.playCollect();
+            });
+        });
+
+        document.getElementById('reset-sprites-btn').addEventListener('click', () => {
+            localStorage.removeItem('bubu_custom_png');
+            localStorage.removeItem('dudu_custom_png');
+            loadSpritesFromStorageOrDefault();
+            bubu.emote = { text: "Default sprites restored! 🌸", timer: 1.8 };
+            sound.playStep();
+        });
+
+        // ==========================================
+        // 5. GAMEPLAY LOGIC & INTERACTIONS
+        // ==========================================
+        function triggerPeekAction() {
+            // Find nearest hiding spot within inspection range
+            let nearest = null;
+            let minDist = 98;
+            for (const spot of hidingSpots) {
+                const d = Math.hypot(bubu.x - spot.x, bubu.y - spot.y);
+                if (d < minDist) {
+                    minDist = d;
+                    nearest = spot;
+                }
+            }
+
+            if (nearest) {
+                inspectSpot(nearest);
+            } else {
+                // Cute sniff animation if nothing is right next to Bubu
+                bubu.emote = { text: "Sniff sniff... 💕", timer: 1.3 };
+                spawnHeartParticles(bubu.x, bubu.y - 45, 2);
+            }
+        }
+
+        function inspectSpot(spot) {
+            spot.shakeTimer = 0.45;
+
+            if (spot.hasDudu) {
+                // WE FOUND DUDU! Trigger adorable surprise cutscene!
+                startSurpriseCutscene(spot);
+                return;
+            }
+
+            if (!spot.checked) {
+                spot.checked = true;
+                sound.playDecoy();
+                // Spawn a cute decoy critter popping out!
+                decoyCritters.push({
+                    x: spot.x,
+                    y: spot.y - 15,
+                    type: spot.decoyType,
+                    timer: 0,
+                    maxTime: 2.2,
+                    vx: (spot.x > bubu.x ? 1 : -1) * 45
+                });
+
+                const cuteLines = [
+                    "Oh! Just a bunny! 🐰",
+                    "A fluttering friend! 🦋",
+                    "Not here, keep looking! 🌸",
+                    "Hehe, nobody here! ✨"
+                ];
+                bubu.emote = {
+                    text: cuteLines[spot.id % cuteLines.length],
+                    timer: 1.8
+                };
+            } else {
+                sound.playStep();
+                bubu.emote = { text: "Already checked here! 🐾", timer: 1.2 };
+            }
+        }
+
+        function startSurpriseCutscene(spot) {
+            gameState = 'CUTSCENE';
+            pointerTarget = null;
+            sound.playWinFanfare();
+			 // Play Dudu's voice once, slightly after the pop-out starts
+			setTimeout(() => playDuduSound(), 400);
+			
+            // Position Bubu nicely to the left of Dudu so they face each other
+            const targetBubuX = spot.x - 58;
+            const targetBubuY = spot.y + 18;
+            bubu.x = Math.max(70, targetBubuX);
+            bubu.y = targetBubuY;
+            bubu.facing = 1;
+            bubu.isMoving = false;
+            bubu.blush = 1;
+            bubu.emote = { text: "DUDU!! 💖✨", timer: 4.0 };
+
+            dudu.x = spot.x + 28;
+            dudu.y = spot.y + 18;
+            dudu.revealed = true;
+            dudu.revealProgress = 0;
+            dudu.bouquetScale = 0;
+
+            // Burst of celebratory hearts, sparkles, and pastel confetti!
+            spawnCelebrationBurst(spot.x, spot.y - 20);
+
+            // Show the replay card smoothly after the bouquet presentation animates
+            setTimeout(() => {
+                if (gameState === 'CUTSCENE') {
+    winStats.innerHTML = `Happy birthdayyy. Du pi cari bunga ja...<br>(Snacks collected: ${collectedSnacks}/${TOTAL_SNACKS} 🍓)`;
+    winOverlay.classList.remove('hidden');
+    requestAnimationFrame(() => {
+        winCard.classList.remove('scale-95', 'opacity-0');
+        winCard.classList.add('scale-100', 'opacity-100');
+    });
+}
+            }, 1900);
+        }
+
+        function updateSnackUI() {
+            snackCounter.textContent = `${collectedSnacks} / ${TOTAL_SNACKS}`;
+        }
+
+        function updateRadar() {
+            if (gameState !== 'PLAYING') {
+                radarHeart.textContent = '💖';
+                radarHeart.style.setProperty('--pulse-speed', '0.6s');
+                radarText.textContent = 'Found Dudu!';
+                radarText.className = 'text-xs sm:text-sm font-extrabold text-pink-600 leading-tight';
+                return;
+            }
+
+            const dist = Math.hypot(bubu.x - dudu.x, bubu.y - dudu.y);
+
+            if (dist < 135) {
+                radarHeart.textContent = '💖';
+                radarHeart.style.setProperty('--pulse-speed', '0.45s');
+                radarText.textContent = 'Almost Bu!!!';
+                radarText.className = 'text-xs sm:text-sm font-extrabold text-rose-500 leading-tight';
+                radarContainer.style.borderColor = '#FB7185';
+            } else if (dist < 270) {
+                radarHeart.textContent = '💗';
+                radarHeart.style.setProperty('--pulse-speed', '0.75s');
+                radarText.textContent = 'Here maybe?';
+                radarText.className = 'text-xs sm:text-sm font-bold text-pink-500 leading-tight';
+                radarContainer.style.borderColor = '#F472B6';
+            } else if (dist < 460) {
+                radarHeart.textContent = '🩷';
+                radarHeart.style.setProperty('--pulse-speed', '1.15s');
+                radarText.textContent = 'Not here Bu:(';
+                radarText.className = 'text-xs sm:text-sm font-bold text-amber-600 leading-tight';
+                radarContainer.style.borderColor = '#FBCFE8';
+            } else {
+                radarHeart.textContent = '🤍';
+                radarHeart.style.setProperty('--pulse-speed', '1.6s');
+                radarText.textContent = 'Far Away...';
+                radarText.className = 'text-xs sm:text-sm font-bold text-stone-500 leading-tight';
+                radarContainer.style.borderColor = '#E7E5E4';
+            }
+        }
+
+        // ==========================================
+        // 6. PARTICLE & EFFECT HELPERS
+        // ==========================================
+        function spawnTapRipple(x, y) {
+            particles.push({
+                type: 'ripple',
+                x, y,
+                radius: 6,
+                maxRadius: 28,
+                alpha: 0.85
+            });
+        }
+
+        function spawnHeartParticles(x, y, count = 5) {
+            const heartChars = ['💖', '💕', '💗', '✨'];
+            for (let i = 0; i < count; i++) {
+                particles.push({
+                    type: 'emoji',
+                    char: heartChars[Math.floor(Math.random() * heartChars.length)],
+                    x: x + (Math.random() - 0.5) * 30,
+                    y: y + (Math.random() - 0.5) * 20,
+                    vx: (Math.random() - 0.5) * 40,
+                    vy: -45 - Math.random() * 45,
+                    size: 16 + Math.random() * 8,
+                    life: 1.0,
+                    decay: 0.65 + Math.random() * 0.3
+                });
+            }
+        }
+
+        function spawnCelebrationBurst(x, y) {
+            // Floating hearts & flowers
+            const icons = ['💖', '🌸', '💐', '✨', '💕', '🌷', '🥰'];
+            for (let i = 0; i < 28; i++) {
+                const angle = (Math.PI * 2 * i) / 28 + Math.random() * 0.2;
+                const speed = 70 + Math.random() * 140;
+                particles.push({
+                    type: 'emoji',
+                    char: icons[i % icons.length],
+                    x,
+                    y,
+                    vx: Math.cos(angle) * speed,
+                    vy: Math.sin(angle) * speed - 60,
+                    size: 18 + Math.random() * 10,
+                    life: 1.0,
+                    decay: 0.32 + Math.random() * 0.2
+                });
+            }
+
+            // Pastel confetti ribbons
+            const confettiColors = ['#FF8FA3', '#FFD166', '#80ED99', '#A0C4FF', '#BDB2FF', '#FFADAD'];
+            for (let i = 0; i < 55; i++) {
+                particles.push({
+                    type: 'confetti',
+                    x: x + (Math.random() - 0.5) * 140,
+                    y: y - 40 - Math.random() * 60,
+                    vx: (Math.random() - 0.5) * 180,
+                    vy: -120 - Math.random() * 160,
+                    gravity: 220,
+                    color: confettiColors[i % confettiColors.length],
+                    w: 8 + Math.random() * 5,
+                    h: 5 + Math.random() * 4,
+                    rot: Math.random() * Math.PI * 2,
+                    vRot: (Math.random() - 0.5) * 8,
+                    life: 1.0,
+                    decay: 0.22
+                });
+            }
+        }
+
+        // ==========================================
+        // 7. UPDATE LOOP
+        // ==========================================
+        function update(dt) {
+            globalTime += dt;
+
+            // Drift clouds gently
+            for (const c of clouds) {
+                c.x += c.speed * dt;
+                if (c.x > WORLD_W + 140) c.x = -140;
+            }
+
+            // Update hiding spot shake timers
+            for (const spot of hidingSpots) {
+                if (spot.shakeTimer > 0) {
+                    spot.shakeTimer = Math.max(0, spot.shakeTimer - dt);
+                }
+            }
+
+            // Update decoy critters
+            for (let i = decoyCritters.length - 1; i >= 0; i--) {
+                const crit = decoyCritters[i];
+                crit.timer += dt;
+                crit.x += crit.vx * dt;
+                if (crit.timer >= crit.maxTime) {
+                    decoyCritters.splice(i, 1);
+                }
+            }
+
+            // Update particles
+            for (let i = particles.length - 1; i >= 0; i--) {
+                const p = particles[i];
+                if (p.type === 'ripple') {
+                    p.radius += 55 * dt;
+                    p.alpha -= 1.8 * dt;
+                    if (p.alpha <= 0) particles.splice(i, 1);
+                } else if (p.type === 'emoji') {
+                    p.x += p.vx * dt;
+                    p.y += p.vy * dt;
+                    p.life -= p.decay * dt;
+                    if (p.life <= 0) particles.splice(i, 1);
+                } else if (p.type === 'confetti') {
+                    p.vy += p.gravity * dt;
+                    p.x += p.vx * dt;
+                    p.y += p.vy * dt;
+                    p.rot += p.vRot * dt;
+                    p.life -= p.decay * dt;
+                    if (p.life <= 0) particles.splice(i, 1);
+                }
+            }
+
+            // Emote timer
+            if (bubu.emote) {
+                bubu.emote.timer -= dt;
+                if (bubu.emote.timer <= 0) bubu.emote = null;
+            }
+
+            if (gameState === 'PLAYING') {
+                let dx = 0;
+                let dy = 0;
+
+                if (keys.ArrowLeft || keys.a || keys.A) dx -= 1;
+                if (keys.ArrowRight || keys.d || keys.D) dx += 1;
+                if (keys.ArrowUp || keys.w || keys.W) dy -= 1;
+                if (keys.ArrowDown || keys.s || keys.S) dy += 1;
+
+                // If no keyboard/dpad pressed, check tap-to-walk target
+                if (dx === 0 && dy === 0 && pointerTarget) {
+                    const tx = pointerTarget.x - bubu.x;
+                    const ty = pointerTarget.y - bubu.y;
+                    const dist = Math.hypot(tx, ty);
+                    if (dist > 6) {
+                        dx = tx / dist;
+                        dy = ty / dist;
+                    } else {
+                        pointerTarget = null;
+                    }
+                } else if (dx !== 0 || dy !== 0) {
+                    // Normalize diagonal movement
+                    const len = Math.hypot(dx, dy);
+                    dx /= len;
+                    dy /= len;
+                }
+
+                if (dx !== 0 || dy !== 0) {
+                    bubu.isMoving = true;
+                    bubu.walkCycle += dt * 13;
+                    if (dx > 0.05) bubu.facing = 1;
+                    if (dx < -0.05) bubu.facing = -1;
+
+                    let nextX = bubu.x + dx * bubu.speed * dt;
+                    let nextY = bubu.y + dy * bubu.speed * dt;
+
+                    // Keep within cozy meadow boundaries (below sky horizon)
+                    nextX = Math.max(48, Math.min(WORLD_W - 48, nextX));
+                    nextY = Math.max(135, Math.min(WORLD_H - 38, nextY));
+
+                    // Soft collision with hiding spot trunks/centers so Bubu walks around them naturally
+                    for (const spot of hidingSpots) {
+                        const distToSpot = Math.hypot(nextX - spot.x, nextY - spot.y);
+                        const minAllowed = 42;
+                        if (distToSpot < minAllowed && distToSpot > 0.01) {
+                            const pushX = (nextX - spot.x) / distToSpot;
+                            const pushY = (nextY - spot.y) / distToSpot;
+                            nextX = spot.x + pushX * minAllowed;
+                            nextY = spot.y + pushY * minAllowed;
+
+                            // Auto-peek if Bubu walks right into Dudu's hiding spot!
+                            if (spot.hasDudu) {
+                                inspectSpot(spot);
+                                return;
+                            }
+                        }
+                    }
+
+                    bubu.x = nextX;
+                    bubu.y = nextY;
+                    sound.playStep();
+                } else {
+                    bubu.isMoving = false;
+                    bubu.walkCycle = 0;
+                }
+
+                // Check collectible snacks
+                for (const snack of snacks) {
+                    if (!snack.collected) {
+                        const dist = Math.hypot(bubu.x - snack.x, bubu.y - snack.y);
+                        if (dist < 44) {
+                            snack.collected = true;
+                            collectedSnacks++;
+                            updateSnackUI();
+                            sound.playCollect();
+                            spawnHeartParticles(snack.x, snack.y - 10, 6);
+                            bubu.emote = { text: "Yummy! 🍓✨", timer: 1.3 };
+                        }
+                    }
+                }
+
+                updateRadar();
+            } else if (gameState === 'CUTSCENE') {
+                // Animate Dudu popping out and presenting the bouquet!
+                dudu.revealProgress = Math.min(1, dudu.revealProgress + dt * 2.2);
+                dudu.bouncePhase += dt * 7;
+                if (dudu.revealProgress > 0.45) {
+                    dudu.bouquetScale = Math.min(1, dudu.bouquetScale + dt * 2.6);
+                }
+
+                // Continuous gentle floating hearts during celebration
+                if (Math.random() < dt * 4.5) {
+                    spawnHeartParticles((bubu.x + dudu.x) / 2, dudu.y - 55, 1);
+                }
+                updateRadar();
+            }
+        }
+
+        // ==========================================
+        // 8. KAWAII VECTOR RENDERING (HTML5 Canvas)
+        // ==========================================
+        function drawBackground() {
+            // Soft pastel sky strip at top
+            const skyGrad = ctx.createLinearGradient(0, 0, 0, 130);
+            skyGrad.addColorStop(0, '#D8F3DC');
+            skyGrad.addColorStop(1, '#E9F5DB');
+            ctx.fillStyle = skyGrad;
+            ctx.fillRect(0, 0, WORLD_W, 130);
+
+            // Fluffy pastel clouds
+            for (const c of clouds) {
+                drawCloud(c.x, c.y, c.scale);
+            }
+
+            // Rolling pastel hills on horizon
+            ctx.fillStyle = '#B7E4C7';
+            ctx.beginPath();
+            ctx.moveTo(0, 125);
+            ctx.quadraticCurveTo(240, 75, 500, 115);
+            ctx.quadraticCurveTo(780, 150, WORLD_W, 100);
+            ctx.lineTo(WORLD_W, 160);
+            ctx.lineTo(0, 160);
+            ctx.closePath();
+            ctx.fill();
+
+            // Main lush meadow grass
+            const meadowGrad = ctx.createLinearGradient(0, 115, 0, WORLD_H);
+            meadowGrad.addColorStop(0, '#C7E9B0');
+            meadowGrad.addColorStop(1, '#A8DF8E');
+            ctx.fillStyle = meadowGrad;
+            ctx.fillRect(0, 115, WORLD_W, WORLD_H - 115);
+
+            // Subtle winding dirt/cream garden path
+            ctx.strokeStyle = '#F7EDE2';
+            ctx.lineWidth = 46;
+            ctx.lineCap = 'round';
+            ctx.beginPath();
+            ctx.moveTo(110, 340);
+            ctx.bezierCurveTo(320, 290, 440, 430, 660, 360);
+            ctx.bezierCurveTo(790, 320, 840, 430, 890, 460);
+            ctx.stroke();
+
+            // Draw swaying grass tufts
+            ctx.strokeStyle = '#74C69D';
+            ctx.lineWidth = 2.5;
+            ctx.lineCap = 'round';
+            for (const g of grassTufts) {
+                const sway = Math.sin(globalTime * 2.5 + g.phase) * 3.5;
+                ctx.beginPath();
+                ctx.moveTo(g.x, g.y);
+                ctx.quadraticCurveTo(g.x - 4, g.y - 8 * g.size, g.x - 6 + sway, g.y - 13 * g.size);
+                ctx.moveTo(g.x, g.y);
+                ctx.quadraticCurveTo(g.x + 4, g.y - 9 * g.size, g.x + 6 + sway, g.y - 14 * g.size);
+                ctx.stroke();
+            }
+
+            // Draw tiny meadow flowers
+            for (const f of meadowFlowers) {
+                const sway = Math.sin(globalTime * 2 + f.phase) * 1.5;
+                ctx.fillStyle = f.color;
+                for (let p = 0; p < 5; p++) {
+                    const ang = (p * Math.PI * 2) / 5;
+                    ctx.beginPath();
+                    ctx.arc(f.x + sway + Math.cos(ang) * f.size * 0.65, f.y + Math.sin(ang) * f.size * 0.65, f.size * 0.55, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+                ctx.fillStyle = '#FFD166';
+                ctx.beginPath();
+                ctx.arc(f.x + sway, f.y, f.size * 0.35, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+
+        function drawCloud(x, y, scale) {
+            ctx.save();
+            ctx.translate(x, y);
+            ctx.scale(scale, scale);
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
+            ctx.beginPath();
+            ctx.arc(-28, 6, 20, 0, Math.PI * 2);
+            ctx.arc(0, -4, 27, 0, Math.PI * 2);
+            ctx.arc(30, 4, 22, 0, Math.PI * 2);
+            ctx.arc(52, 10, 15, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+        }
+
+        function drawSnack(snack) {
+            if (snack.collected) return;
+            const bob = Math.sin(globalTime * 3.5 + snack.bobPhase) * 5;
+
+            // Soft shadow
+            ctx.fillStyle = 'rgba(82, 121, 111, 0.2)';
+            ctx.beginPath();
+            ctx.ellipse(snack.x, snack.y + 16, 13, 5, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Glowing pastel aura
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.55)';
+            ctx.beginPath();
+            ctx.arc(snack.x, snack.y + bob, 18, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.font = '24px "Fredoka", sans-serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(snack.emoji, snack.x, snack.y + bob);
+        }
+
+        function drawHidingSpot(spot) {
+            ctx.save();
+            const shakeOffset = spot.shakeTimer > 0 ? Math.sin(spot.shakeTimer * 45) * 6 : 0;
+            ctx.translate(spot.x + shakeOffset, spot.y);
+
+            // Ground shadow
+            ctx.fillStyle = 'rgba(64, 104, 72, 0.22)';
+            ctx.beginPath();
+            ctx.ellipse(0, 24, 52, 16, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            // If Dudu is hiding here and NOT yet revealed, draw a super subtle cute clue (a tiny brown ear tip peeking!)
+            if (spot.hasDudu && !dudu.revealed) {
+                const peekBob = Math.sin(globalTime * 3) * 2;
+                ctx.fillStyle = '#C59578';
+                ctx.strokeStyle = '#4A2B20';
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                ctx.arc(-14, -28 + peekBob, 8.5, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.stroke();
+                ctx.fillStyle = '#5E3829';
+                ctx.beginPath();
+                ctx.arc(-14, -28 + peekBob, 4, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            if (spot.type === 'cherry_tree') {
+                // Trunk
+                ctx.fillStyle = '#8D6E63';
+                ctx.beginPath();
+                ctx.roundRect(-12, -18, 24, 42, 8);
+                ctx.fill();
+                // Fluffy pink sakura canopy
+                ctx.fillStyle = '#FFCCD5';
+                ctx.beginPath();
+                ctx.arc(-24, -36, 26, 0, Math.PI * 2);
+                ctx.arc(24, -34, 25, 0, Math.PI * 2);
+                ctx.arc(0, -52, 32, 0, Math.PI * 2);
+                ctx.arc(0, -28, 28, 0, Math.PI * 2);
+                ctx.fill();
+                // Highlights
+                ctx.fillStyle = '#FFF0F3';
+                ctx.beginPath();
+                ctx.arc(-8, -56, 12, 0, Math.PI * 2);
+                ctx.fill();
+            } else if (spot.type === 'oak_tree') {
+                // Trunk
+                ctx.fillStyle = '#7F5539';
+                ctx.beginPath();
+                ctx.roundRect(-13, -18, 26, 42, 8);
+                ctx.fill();
+                // Minty fluffy canopy
+                ctx.fillStyle = '#74C69D';
+                ctx.beginPath();
+                ctx.arc(-25, -35, 25, 0, Math.PI * 2);
+                ctx.arc(25, -35, 25, 0, Math.PI * 2);
+                ctx.arc(0, -54, 32, 0, Math.PI * 2);
+                ctx.arc(0, -28, 28, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.fillStyle = '#95D5B2';
+                ctx.beginPath();
+                ctx.arc(-6, -56, 13, 0, Math.PI * 2);
+                ctx.fill();
+            } else if (spot.type === 'berry_bush') {
+                ctx.fillStyle = '#52B788';
+                ctx.beginPath();
+                ctx.arc(-22, 4, 22, 0, Math.PI * 2);
+                ctx.arc(22, 4, 22, 0, Math.PI * 2);
+                ctx.arc(0, -10, 28, 0, Math.PI * 2);
+                ctx.fill();
+                // Cute red berries
+                const berries = [[-16, -2], [14, 2], [-4, -18], [18, -12], [-22, 10], [4, 8]];
+                ctx.fillStyle = '#FF4D6D';
+                for (const [bx, by] of berries) {
+                    ctx.beginPath();
+                    ctx.arc(bx, by, 4.5, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            } else if (spot.type === 'flower_bush') {
+                ctx.fillStyle = '#74C69D';
+                ctx.beginPath();
+                ctx.arc(-22, 5, 22, 0, Math.PI * 2);
+                ctx.arc(22, 5, 22, 0, Math.PI * 2);
+                ctx.arc(0, -8, 27, 0, Math.PI * 2);
+                ctx.fill();
+                // Pastel hydrangea puffs
+                const puffs = [[-15, -5, '#BDB2FF'], [15, -4, '#A0C4FF'], [0, -16, '#FFC6FF']];
+                for (const [px, py, col] of puffs) {
+                    ctx.fillStyle = col;
+                    ctx.beginPath();
+                    ctx.arc(px, py, 10, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            } else if (spot.type === 'sunflower_patch') {
+                ctx.fillStyle = '#52B788';
+                ctx.beginPath();
+                ctx.ellipse(0, 10, 38, 16, 0, 0, Math.PI * 2);
+                ctx.fill();
+                const stems = [-18, 0, 18];
+                stems.forEach((sx, idx) => {
+                    const topY = -22 - (idx % 2) * 10;
+                    ctx.strokeStyle = '#40916C';
+                    ctx.lineWidth = 4;
+                    ctx.beginPath();
+                    ctx.moveTo(sx, 10);
+                    ctx.lineTo(sx, topY);
+                    ctx.stroke();
+                    // Petals
+                    ctx.fillStyle = '#FFD166';
+                    ctx.beginPath();
+                    ctx.arc(sx, topY, 13, 0, Math.PI * 2);
+                    ctx.fill();
+                    // Center
+                    ctx.fillStyle = '#7F5539';
+                    ctx.beginPath();
+                    ctx.arc(sx, topY, 6, 0, Math.PI * 2);
+                    ctx.fill();
+                });
+            } else if (spot.type === 'picnic_basket') {
+                // Checkered blanket
+                ctx.fillStyle = '#FFCCD5';
+                ctx.beginPath();
+                ctx.roundRect(-42, 2, 84, 24, 10);
+                ctx.fill();
+                // Wicker basket
+                ctx.fillStyle = '#DDA15E';
+                ctx.beginPath();
+                ctx.roundRect(-22, -16, 44, 28, 8);
+                ctx.fill();
+                ctx.strokeStyle = '#BC6C25';
+                ctx.lineWidth = 3;
+                ctx.strokeRect(-20, -14, 40, 24);
+                // Handle
+                ctx.beginPath();
+                ctx.arc(0, -16, 16, Math.PI, 0);
+                ctx.stroke();
+            } else if (spot.type === 'mushroom_log') {
+                // Cozy log
+                ctx.fillStyle = '#9C6644';
+                ctx.beginPath();
+                ctx.roundRect(-40, -2, 80, 24, 12);
+                ctx.fill();
+                ctx.fillStyle = '#E6CCB2';
+                ctx.beginPath();
+                ctx.arc(38, 10, 11, 0, Math.PI * 2);
+                ctx.fill();
+                // Cute spotted red mushroom
+                ctx.fillStyle = '#FFF8F0';
+                ctx.fillRect(-16, -16, 10, 16);
+                ctx.fillStyle = '#FF595E';
+                ctx.beginPath();
+                ctx.arc(-11, -16, 15, Math.PI, 0);
+                ctx.fill();
+                ctx.fillStyle = '#FFFFFF';
+                ctx.beginPath();
+                ctx.arc(-15, -22, 3, 0, Math.PI * 2);
+                ctx.arc(-6, -20, 2.5, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            // Show subtle "Peek?" prompt badge when Bubu walks close during gameplay
+            if (gameState === 'PLAYING') {
+                const dist = Math.hypot(bubu.x - spot.x, bubu.y - spot.y);
+                if (dist < 95) {
+                    const floatY = Math.sin(globalTime * 6) * 3;
+                    ctx.fillStyle = '#FFFFFF';
+                    ctx.strokeStyle = '#FF8FA3';
+                    ctx.lineWidth = 2.5;
+                    ctx.beginPath();
+                    ctx.roundRect(-34, -76 + floatY, 68, 24, 12);
+                    ctx.fill();
+                    ctx.stroke();
+
+                    ctx.fillStyle = '#E11D48';
+                    ctx.font = 'bold 12px "Fredoka", sans-serif';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText('Peek! 👀', 0, -64 + floatY);
+                }
+            }
+
+            ctx.restore();
+        }
+
+        function drawSpeechBubble(x, y, text) {
+            ctx.save();
+            ctx.font = 'bold 13px "Fredoka", sans-serif';
+            const metrics = ctx.measureText(text);
+            const padX = 12;
+            const w = Math.max(60, metrics.width + padX * 2);
+            const h = 28;
+
+            // Keep bubble within canvas bounds
+            const clampedX = Math.max(w / 2 + 10, Math.min(WORLD_W - w / 2 - 10, x));
+            const clampedY = Math.max(30, y);
+
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.95)';
+            ctx.strokeStyle = '#F8C8DC';
+            ctx.lineWidth = 2.5;
+            ctx.beginPath();
+            ctx.roundRect(clampedX - w / 2, clampedY - h / 2, w, h, 14);
+            ctx.fill();
+            ctx.stroke();
+
+            // Little pointer triangle
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.95)';
+            ctx.beginPath();
+            ctx.moveTo(clampedX - 5, clampedY + h / 2 - 1);
+            ctx.lineTo(clampedX + 5, clampedY + h / 2 - 1);
+            ctx.lineTo(clampedX, clampedY + h / 2 + 6);
+            ctx.closePath();
+            ctx.fill();
+
+            ctx.fillStyle = '#5D4037';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(text, clampedX, clampedY + 1);
+            ctx.restore();
+        }
+
+        /**
+         * Draw Bubu using the PNG Image sprite (bubuImg) drawn onto the canvas
+         * with gentle run-tilt, hop animation, and ground shadow.
+         */
+        function drawBubu() {
+            ctx.save();
+            const walkBob = bubu.isMoving ? Math.abs(Math.sin(bubu.walkCycle)) * 4.5 : Math.sin(globalTime * 3) * 1.4;
+            const tilt = bubu.isMoving ? Math.sin(bubu.walkCycle) * 0.08 : 0;
+
+            ctx.translate(bubu.x, bubu.y);
+
+            // Ground shadow
+            ctx.fillStyle = 'rgba(64, 104, 72, 0.24)';
+            ctx.beginPath();
+            ctx.ellipse(0, 26, 23, 7.5, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.translate(0, -walkBob);
+            ctx.rotate(tilt);
+
+            // Flip horizontally when running left
+            if (bubu.facing < 0) {
+                ctx.scale(-1, 1);
+            }
+
+            if (bubuSpriteReady && bubuImg.complete && bubuImg.naturalWidth > 0) {
+                const targetH = 87;
+                const aspect = bubuImg.naturalWidth / bubuImg.naturalHeight;
+                const targetW = targetH * aspect;
+                ctx.drawImage(bubuImg, -targetW / 2, -targetH + 39, targetW, targetH);
+            }
+
+            ctx.restore();
+
+            if (bubu.emote) {
+                drawSpeechBubble(bubu.x, bubu.y - 60 - walkBob, bubu.emote.text);
+            }
+        }
+
+        /**
+         * Draw Dudu using the PNG Image sprite (duduImg) drawn onto the canvas,
+         * plus the animated flower bouquet presented to Bubu on reveal!
+         */
+        function drawDudu() {
+            if (!dudu.revealed) return;
+
+            ctx.save();
+            const popScale = Math.min(1, dudu.revealProgress * 1.15);
+            const hop = Math.abs(Math.sin(dudu.bouncePhase)) * 7;
+
+            ctx.translate(dudu.x, dudu.y);
+
+            // Ground shadow
+            ctx.fillStyle = 'rgba(64, 104, 72, 0.24)';
+            ctx.beginPath();
+            ctx.ellipse(0, 26, 24 * popScale, 8 * popScale, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.translate(0, -hop);
+            ctx.scale(popScale, popScale);
+
+            if (duduSpriteReady && duduImg.complete && duduImg.naturalWidth > 0) {
+                const targetH = 75;
+                const aspect = duduImg.naturalWidth / duduImg.naturalHeight;
+                const targetW = targetH * aspect;
+                ctx.drawImage(duduImg, -targetW / 2, -targetH + 27, targetW, targetH);
+            }
+
+            // Dudu's Bouquet of Flowers extended toward Bubu!
+            if (dudu.bouquetScale > 0) {
+                const outline = '#4A2B20';
+                ctx.save();
+                ctx.translate(-24, 1);
+                ctx.scale(dudu.bouquetScale, dudu.bouquetScale);
+                ctx.rotate(-0.25 + Math.sin(globalTime * 5) * 0.06);
+
+                // Bouquet paper wrap cone
+                ctx.fillStyle = '#FFF0F3';
+                ctx.strokeStyle = outline;
+                ctx.lineWidth = 2.4;
+                ctx.beginPath();
+                ctx.moveTo(0, 12);
+                ctx.lineTo(-16, -12);
+                ctx.lineTo(14, -12);
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
+
+                // Ribbon bow
+                ctx.fillStyle = '#FF4D6D';
+                ctx.beginPath();
+                ctx.arc(-1, 2, 3.8, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Colorful flowers in bouquet
+                const blooms = [
+                    { x: -10, y: -15, c: '#FF758F' },
+                    { x: 0, y: -19, c: '#FFD166' },
+                    { x: 10, y: -14, c: '#FF8FA3' },
+                    { x: -4, y: -11, c: '#CDB4DB' },
+                    { x: 5, y: -10, c: '#FFCCD5' }
+                ];
+                for (const b of blooms) {
+                    ctx.fillStyle = b.c;
+                    ctx.strokeStyle = outline;
+                    ctx.lineWidth = 1.6;
+                    ctx.beginPath();
+                    ctx.arc(b.x, b.y, 6.5, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.stroke();
+                    ctx.fillStyle = '#FFF3B0';
+                    ctx.beginPath();
+                    ctx.arc(b.x, b.y, 2.2, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+
+                ctx.restore();
+            }
+
+            ctx.restore();
+
+            if (dudu.bouquetScale > 0.7) {
+                drawSpeechBubble(dudu.x + 12, dudu.y - 62 - hop, "For you, Bubu! 💐💕");	
+				//playDuduSound();
+            }
+			
+        }
+
+        function drawDecoyCritters() {
+            const emojiMap = {
+                bunny: '🐰',
+                butterfly: '🦋',
+                bird: '🐤',
+                cat: '🐱',
+                frog: '🐸'
+            };
+            for (const crit of decoyCritters) {
+                const hop = Math.abs(Math.sin(crit.timer * 12)) * 14;
+                const alpha = Math.min(1, (crit.maxTime - crit.timer) * 2);
+                ctx.save();
+                ctx.globalAlpha = Math.max(0, alpha);
+                ctx.font = '26px "Fredoka", sans-serif';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(emojiMap[crit.type] || '🐰', crit.x, crit.y - hop);
+                ctx.restore();
+            }
+        }
+
+        function drawParticles() {
+            for (const p of particles) {
+                ctx.save();
+                if (p.type === 'ripple') {
+                    ctx.strokeStyle = `rgba(255, 143, 163, ${Math.max(0, p.alpha)})`;
+                    ctx.lineWidth = 3;
+                    ctx.beginPath();
+                    ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+                    ctx.stroke();
+                } else if (p.type === 'emoji') {
+                    ctx.globalAlpha = Math.max(0, p.life);
+                    ctx.font = `${Math.round(p.size)}px "Fredoka", sans-serif`;
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText(p.char, p.x, p.y);
+                } else if (p.type === 'confetti') {
+                    ctx.globalAlpha = Math.max(0, p.life);
+                    ctx.translate(p.x, p.y);
+                    ctx.rotate(p.rot);
+                    ctx.fillStyle = p.color;
+                    ctx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h);
+                }
+                ctx.restore();
+            }
+        }
+
+        function render() {
+            ctx.clearRect(0, 0, WORLD_W, WORLD_H);
+
+            drawBackground();
+
+            // Draw tap target indicator if walking via tap
+            if (pointerTarget && gameState === 'PLAYING') {
+                const pulse = 6 + Math.sin(globalTime * 8) * 2;
+                ctx.strokeStyle = 'rgba(255, 107, 139, 0.65)';
+                ctx.lineWidth = 2.5;
+                ctx.beginPath();
+                ctx.arc(pointerTarget.x, pointerTarget.y, pulse, 0, Math.PI * 2);
+                ctx.stroke();
+            }
+
+            // Draw snacks
+            for (const snack of snacks) {
+                drawSnack(snack);
+            }
+
+            // Depth sort (Y-sorting) hiding spots, Bubu, and Dudu so characters walk naturally in front/behind trees!
+            const renderables = [];
+
+            for (const spot of hidingSpots) {
+                renderables.push({
+                    y: spot.y,
+                    draw: () => drawHidingSpot(spot)
+                });
+            }
+
+            renderables.push({
+                y: bubu.y,
+                draw: () => drawBubu()
+            });
+
+            if (dudu.revealed) {
+                renderables.push({
+                    y: dudu.y,
+                    draw: () => drawDudu()
+                });
+            }
+
+            renderables.sort((a, b) => a.y - b.y);
+            for (const item of renderables) {
+                item.draw();
+            }
+
+            drawDecoyCritters();
+            drawParticles();
+        }
+
+        // ==========================================
+        // 9. RESPONSIVE CANVAS & MAIN LOOP
+        // ==========================================
+        function resizeCanvas() {
+            const container = document.getElementById('game-frame');
+            const dpr = Math.min(window.devicePixelRatio || 1, 2);
+            const rect = container.getBoundingClientRect();
+
+            canvas.width = WORLD_W * dpr;
+            canvas.height = WORLD_H * dpr;
+            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        }
+
+        function gameLoop(timestamp) {
+            if (!lastTimestamp) lastTimestamp = timestamp;
+            const dt = Math.min(0.05, (timestamp - lastTimestamp) / 1000);
+            lastTimestamp = timestamp;
+
+            update(dt);
+            render();
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        window.addEventListener('resize', resizeCanvas);
+
+        window.onload = function () {
+            loadSpritesFromStorageOrDefault();
+            initEnvironment();
+            resetGame();
+            resizeCanvas();
+            requestAnimationFrame(gameLoop);
+        };
+    </script>
+</body>
+</html>
